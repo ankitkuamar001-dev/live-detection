@@ -1,0 +1,79 @@
+app:
+  name: "Live Detection System"
+  version: "1.0.0"
+  debug: false
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+
+models:
+  device: "cpu"
+  object_detection:
+    model_path: "models/weights/yolo11s.pt"
+    confidence_threshold: 0.5
+    iou_threshold: 0.45
+    imgsz: 640
+  mask_detection:
+    model_path: "models/weights/yolo11n_mask.pt"
+    confidence_threshold: 0.5
+    iou_threshold: 0.45
+    imgsz: 640
+  emotion_recognition:
+    model_name: "enet_b0_8_va_mtl"
+    confidence_threshold: 0.4
+    temporal_smoothing_alpha: 0.15
+    temporal_window_size: 10
+
+tracking:
+  tracker_type: "bytetrack"
+  track_high_thresh: 0.5
+  track_low_thresh: 0.1
+  new_track_thresh: 0.6
+  track_buffer: 30
+  match_thresh: 0.8
+
+video:
+  max_fps: 30
+  buffer_size: 30
+  jpeg_quality: 80
+  resize_width: 640
+  skip_frames: 1
+
+database:
+  url: "postgresql+asyncpg://user:password@localhost:5432/live_detection"
+  pool_size: 20
+  max_overflow: 10
+  echo: false
+  batch_insert_size: 50
+  batch_insert_interval_seconds: 5
+
+redis:
+  url: "redis://localhost:6379/0"
+
+alerts:
+  enabled: true
+  cooldown_seconds: 60
+  rules:
+    no_mask:
+      enabled: true
+      confidence_threshold: 0.7
+      channels: ["webhook"]
+    aggressive_emotion:
+      enabled: true
+      emotions: ["angry", "fear"]
+      confidence_threshold: 0.6
+      channels: ["webhook"]
+    zone_intrusion:
+      enabled: true
+      channels: ["webhook"]
+
+storage:
+  snapshot_dir: "data/snapshots"
+  video_clip_dir: "data/clips"
+  retention_days: 30
+
+monitoring:
+  prometheus_enabled: true
+  metrics_endpoint: "/metrics"

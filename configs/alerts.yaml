@@ -1,0 +1,43 @@
+channels:
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    username: ""
+    password: ""
+    from_address: ""
+    to_addresses: []
+  telegram:
+    enabled: false
+    bot_token: ""
+    chat_id: ""
+  whatsapp:
+    enabled: false
+    api_url: ""
+    api_token: ""
+    phone_number: ""
+  webhook:
+    enabled: true
+    url: "http://localhost:8000/api/v1/alerts/webhook"
+    headers: {}
+
+rules:
+  - name: "No Mask Alert"
+    event_type: "no_mask"
+    conditions:
+      confidence_gte: 0.7
+      min_duration_seconds: 2
+    channels: ["webhook"]
+    cooldown_seconds: 60
+  - name: "Aggressive Emotion"
+    event_type: "aggressive_emotion"
+    conditions:
+      emotions: ["angry", "fear"]
+      confidence_gte: 0.6
+    channels: ["webhook"]
+    cooldown_seconds: 30
+  - name: "Zone Intrusion"
+    event_type: "zone_intrusion"
+    conditions: {}
+    channels: ["webhook"]
+    cooldown_seconds: 120

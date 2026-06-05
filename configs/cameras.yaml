@@ -1,0 +1,9 @@
+cameras:
+  - id: "cam_01"
+    name: "Default Webcam"
+    source: 0
+    source_type: "webcam"
+    enabled: true
+    fps: 30
+    resolution: [1280, 720]
+    zones: []

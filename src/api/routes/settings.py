@@ -64,12 +64,14 @@ async def get_runtime_settings():
     """Get current runtime configuration."""
     settings = get_settings()
     return {
-        "model_name": _runtime_overrides.get("model_name", settings.detection.model),
-        "confidence_threshold": _runtime_overrides.get(
-            "confidence_threshold", settings.detection.confidence_threshold
+        "model_name": _runtime_overrides.get(
+            "model_name", settings.models.object_detection.model_path
         ),
-        "target_fps": _runtime_overrides.get("target_fps", 15),
-        "device": settings.detection.device,
+        "confidence_threshold": _runtime_overrides.get(
+            "confidence_threshold", settings.models.object_detection.confidence_threshold
+        ),
+        "target_fps": _runtime_overrides.get("target_fps", settings.video.max_fps),
+        "device": settings.models.device,
         "debug": settings.debug,
     }
 

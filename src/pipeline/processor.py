@@ -3,7 +3,6 @@ import asyncio
 import numpy as np
 import structlog
 from typing import AsyncGenerator
-import asyncio
 from src.video.stream import VideoStream
 from src.pipeline.result import ObjectDetectionResult, BoundingBox
 from src.detection.object_detector import ObjectDetector
@@ -19,13 +18,21 @@ from src.api.routes.telemetry import broadcaster
 logger = structlog.get_logger()
 
 class PipelineProcessor:
-    def __init__(self, detector: ObjectDetector, mask_detector: MaskDetector = None):
+    def __init__(
+        self,
+        detector: ObjectDetector,
+        mask_detector: MaskDetector = None,
+        event_logger=None,
+        camera_id: str = "default",
+    ):
         self.detector = detector
         self.mask_detector = mask_detector or MaskDetector()
         self.face_detector = FaceDetector()
         self.emotion_recognizer = EmotionRecognizer()
         self.emotion_filter = TemporalFilter(window_size=5)
         self.alert_dispatcher = AlertDispatcher(cooldown_seconds=60)
+        self._event_logger = event_logger
+        self._camera_id = camera_id
 
     def _cascade_mask_detection(self, frame: np.ndarray, detections: list):
         """
@@ -171,6 +178,47 @@ class PipelineProcessor:
                     "emotions": emotions
                 }
                 asyncio.create_task(broadcaster.broadcast_stats(stats))
+                
+                # Log detection events to database
+                if self._event_logger and detections:
+                    for det in detections:
+                        cls = det.get("class_name", "").lower()
+                        # Log person-level detections (mask + emotion)
+                        if cls == "person":
+                            mask_s = det.get("mask_status")
+                            if mask_s:
+                                self._event_logger.log_event(
+                                    camera_id=self._camera_id,
+                                    detection_type="mask",
+                                    label=mask_s,
+                                    confidence=det["confidence"],
+                                    bbox={"x1": det["bbox"][0], "y1": det["bbox"][1],
+                                           "x2": det["bbox"][2], "y2": det["bbox"][3]},
+                                    track_id=det.get("track_id"),
+                                )
+                            emotion = det.get("emotion")
+                            if emotion:
+                                self._event_logger.log_event(
+                                    camera_id=self._camera_id,
+                                    detection_type="emotion",
+                                    label=emotion.lower(),
+                                    confidence=det.get("emotion_confidence", 0.0),
+                                    bbox={"x1": det["bbox"][0], "y1": det["bbox"][1],
+                                           "x2": det["bbox"][2], "y2": det["bbox"][3]},
+                                    track_id=det.get("track_id"),
+                                )
+                        # Log other objects of interest
+                        elif cls in ("phone", "laptop", "bag", "bottle", "backpack",
+                                     "handbag", "suitcase", "knife", "scissors"):
+                            self._event_logger.log_event(
+                                camera_id=self._camera_id,
+                                detection_type="object",
+                                label=cls,
+                                confidence=det["confidence"],
+                                bbox={"x1": det["bbox"][0], "y1": det["bbox"][1],
+                                       "x2": det["bbox"][2], "y2": det["bbox"][3]},
+                                track_id=det.get("track_id"),
+                            )
                 
                 # Annotate frame
                 annotated = await loop.run_in_executor(None, self.detector.draw_detections, frame, detections)

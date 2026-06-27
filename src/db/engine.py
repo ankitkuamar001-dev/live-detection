@@ -60,7 +60,7 @@ class UUIDMixin:
     id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
-        default_factory=lambda: str(uuid.uuid4()),
+        default=lambda: str(uuid.uuid4()),
     )
 
 

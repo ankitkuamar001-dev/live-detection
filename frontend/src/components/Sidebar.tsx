@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Camera, Video, AlertTriangle, Settings, Activity,
+  LayoutDashboard, Camera, Video, BarChart3, AlertTriangle, Settings, Activity,
 } from 'lucide-react';
 import type { TabId } from '../types';
 
@@ -13,6 +13,7 @@ const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'cameras', label: 'Cameras', icon: Camera },
   { id: 'recordings', label: 'Recordings', icon: Video },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'alerts', label: 'Alert Rules', icon: AlertTriangle },
 ];
 

@@ -1,0 +1,47 @@
+# Production configuration overlay
+# Merged on top of default.yaml when APP_ENV=production
+
+app:
+  name: "LiveDetect Production"
+  version: "1.0.0"
+  debug: false
+  log_level: "INFO"
+  log_format: "json"
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1   # Keep 1 for model state; scale via containers
+
+models:
+  device: "cpu"
+  object_detection:
+    confidence_threshold: 0.5
+    imgsz: 640
+  mask_detection:
+    confidence_threshold: 0.5
+  emotion_recognition:
+    confidence_threshold: 0.4
+    temporal_smoothing_alpha: 0.15
+
+video:
+  max_fps: 30
+  buffer_size: 30
+  jpeg_quality: 75
+  resize_width: 640
+
+database:
+  url: "sqlite+aiosqlite:///data/live_detection.db"
+  pool_size: 5
+  max_overflow: 5
+  echo: false
+  batch_insert_size: 100
+  batch_insert_interval_seconds: 10
+
+storage:
+  snapshot_dir: "data/snapshots"
+  video_clip_dir: "data/clips"
+  retention_days: 30
+
+monitoring:
+  prometheus_enabled: true

@@ -42,9 +42,9 @@ video:
   skip_frames: 1
 
 database:
-  url: "postgresql+asyncpg://user:password@localhost:5432/live_detection"
-  pool_size: 20
-  max_overflow: 10
+  url: "sqlite+aiosqlite:///data/live_detection.db"
+  pool_size: 5
+  max_overflow: 5
   echo: false
   batch_insert_size: 50
   batch_insert_interval_seconds: 5

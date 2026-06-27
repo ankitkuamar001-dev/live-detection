@@ -5,6 +5,7 @@ import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import CamerasPage from './pages/CamerasPage';
 import RecordingsPage from './pages/RecordingsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import AlertRulesPage from './pages/AlertRulesPage';
 import SettingsPage from './pages/SettingsPage';
 import type { TabId } from './types';
@@ -13,6 +14,7 @@ const TAB_TITLES: Record<TabId, string> = {
   dashboard: 'Overview',
   cameras: 'Cameras Management',
   recordings: 'Recordings & History',
+  analytics: 'Historical Analytics',
   alerts: 'Alert Rules Configuration',
   settings: 'System Settings',
 };
@@ -40,6 +42,7 @@ function App() {
         )}
         {activeTab === 'cameras' && <CamerasPage />}
         {activeTab === 'recordings' && <RecordingsPage />}
+        {activeTab === 'analytics' && <AnalyticsPage />}
         {activeTab === 'alerts' && <AlertRulesPage />}
         {activeTab === 'settings' && <SettingsPage />}
       </main>

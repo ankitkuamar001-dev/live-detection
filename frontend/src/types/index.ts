@@ -100,4 +100,53 @@ export interface RuntimeSettings {
 
 // ── Navigation ─────────────────────────────────────────────────────────
 
-export type TabId = 'dashboard' | 'cameras' | 'recordings' | 'alerts' | 'settings';
+export type TabId = 'dashboard' | 'cameras' | 'recordings' | 'analytics' | 'alerts' | 'settings';
+
+// ── Analytics ──────────────────────────────────────────────────────────
+
+export interface AnalyticsHourly {
+  id: number;
+  camera_id: string;
+  hour: string;
+  total_detections: number;
+  mask_count: number;
+  no_mask_count: number;
+  incorrect_mask_count: number;
+  emotion_distribution: Record<string, number> | null;
+  object_counts: Record<string, number> | null;
+  avg_fps: number | null;
+  avg_inference_ms: number | null;
+}
+
+export interface AnalyticsSummary {
+  period_hours: number;
+  total_events: number;
+  by_type: Record<string, number>;
+  mask_breakdown: Record<string, number>;
+  mask_compliance_pct: number;
+  emotion_breakdown: Record<string, number>;
+  active_cameras: number;
+}
+
+export interface DetectionEvent {
+  id: number;
+  camera_id: string;
+  detected_at: string;
+  detection_type: string;
+  label: string;
+  confidence: number;
+  bbox: Record<string, number> | null;
+  track_id: number | null;
+  snapshot_path: string | null;
+}
+
+// ── Zones ──────────────────────────────────────────────────────────────
+
+export interface Zone {
+  id: string;
+  name: string;
+  camera_id: string;
+  polygon: number[][];
+  zone_type: 'exclusion' | 'monitoring' | 'counting';
+  is_active: boolean;
+}

@@ -18,7 +18,7 @@ from fastapi import FastAPI
 
 from src.core.config import get_settings
 from src.core.logging import get_logger, setup_logging
-from src.db.engine import create_db_engine, create_session_factory
+from src.db.engine import create_db_engine, create_session_factory, init_db
 
 logger = get_logger(__name__)
 
@@ -39,13 +39,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     **Startup**:
         1. Load settings from YAML + env vars.
         2. Setup structured logging.
-        3. Create DB engine & session factory.
-        4. Ensure storage directories exist.
-        5. Log startup banner.
+        3. Create DB engine & session factory, auto-create tables.
+        4. Start background event logger.
+        5. Ensure storage directories exist.
+        6. Log startup banner.
 
     **Shutdown**:
-        1. Dispose DB engine.
-        2. Log shutdown message.
+        1. Flush & stop event logger.
+        2. Dispose DB engine.
+        3. Log shutdown message.
     """
     global _start_time
     _start_time = time.monotonic()
@@ -68,7 +70,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         session_factory = create_session_factory(engine)
         app.state.db_engine = engine
         app.state.session_factory = session_factory
-        logger.info("database_connected", url=settings.database.url.split("@")[-1])
+
+        # Auto-create tables (safe for SQLite; use Alembic in production with PG)
+        await init_db(engine)
+        logger.info("database_initialized", url=settings.database.url.split("@")[-1])
     except Exception:
         logger.exception("database_connection_failed")
         # Allow app to start without DB in development
@@ -79,9 +84,34 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     for dir_path in (settings.storage.snapshot_dir, settings.storage.video_clip_dir):
         Path(dir_path).mkdir(parents=True, exist_ok=True)
 
-    # ── 5. Placeholder state for later phases ────────────────────────────
-    app.state.model_registry = None  # Phase 3
-    app.state.stream_manager = None  # Phase 2
+    # ── 5. Background services ───────────────────────────────────────────
+    event_logger = None
+    analytics_aggregator = None
+
+    if app.state.session_factory is not None:
+        # Event Logger — batches detection events and flushes to DB
+        from src.db.event_logger import EventLogger
+
+        event_logger = EventLogger(
+            app.state.session_factory,
+            batch_size=settings.database.batch_insert_size,
+            flush_interval=float(settings.database.batch_insert_interval_seconds),
+        )
+        await event_logger.start()
+        app.state.event_logger = event_logger
+
+        # Analytics Aggregator — rolls up events into hourly buckets
+        from src.services.analytics_aggregator import AnalyticsAggregator
+
+        analytics_aggregator = AnalyticsAggregator(
+            app.state.session_factory,
+            interval_seconds=300,  # every 5 minutes
+        )
+        await analytics_aggregator.start()
+        app.state.analytics_aggregator = analytics_aggregator
+    else:
+        app.state.event_logger = None
+        app.state.analytics_aggregator = None
 
     # ── 6. Startup banner ────────────────────────────────────────────────
     _log_startup_banner(settings)
@@ -90,6 +120,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     # ── SHUTDOWN ─────────────────────────────────────────────────────────
+    # Stop background services first
+    if analytics_aggregator is not None:
+        await analytics_aggregator.stop()
+
+    if event_logger is not None:
+        await event_logger.stop()
+
     if app.state.db_engine is not None:
         await app.state.db_engine.dispose()
         logger.info("database_disconnected")

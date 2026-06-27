@@ -26,6 +26,8 @@ from src.api.routes import cameras
 from src.api.routes import recordings
 from src.api.routes import alert_rules
 from src.api.routes import settings as settings_routes
+from src.api.routes import analytics
+from src.api.routes import zones
 from src.core.config import get_settings
 from src.core.events import lifespan
 from src.core.exceptions import AppException, app_exception_handler
@@ -62,6 +64,8 @@ def create_app() -> FastAPI:
     application.include_router(recordings.router, prefix="/api/v1")
     application.include_router(alert_rules.router, prefix="/api/v1")
     application.include_router(settings_routes.router, prefix="/api/v1")
+    application.include_router(analytics.router, prefix="/api/v1")
+    application.include_router(zones.router, prefix="/api/v1")
 
     # ── Prometheus metrics ───────────────────────────────────────────────
     if settings.monitoring.prometheus_enabled:
